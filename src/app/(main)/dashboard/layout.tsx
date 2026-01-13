@@ -26,7 +26,9 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   // Fetch user dari Supabase
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Redirect ke login jika belum login
   if (!user) {
@@ -35,17 +37,17 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
 
   // ✅ Fetch user profile dari public.users table (untuk role yang akurat)
   const { data: userProfile } = await supabase
-    .from('users')
-    .select('full_name, role, avatar_url')
-    .eq('id', user.id)
+    .from("users")
+    .select("full_name, role, avatar_url")
+    .eq("id", user.id)
     .single();
 
   const userData = {
     id: user.id,
-    name: userProfile?.full_name || user.user_metadata.full_name || user.email?.split('@')[0] || 'User',
-    email: user.email || '',
-    avatar: userProfile?.avatar_url || user.user_metadata.avatar_url || '',
-    role: userProfile?.role || 'production', // ✅ Role dari table, bukan metadata
+    name: userProfile?.full_name || user.user_metadata.full_name || user.email?.split("@")[0] || "User",
+    email: user.email || "",
+    avatar: userProfile?.avatar_url || user.user_metadata.avatar_url || "",
+    role: userProfile?.role || "production", // ✅ Role dari table, bukan metadata
   };
 
   console.log("Authenticated user:", { email: user.email, role: userData.role });

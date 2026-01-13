@@ -1,7 +1,8 @@
 // Proxy disabled.
 // Rename this file to `proxy.ts` to enable it.
 import { type NextRequest, NextResponse } from "next/server";
-import { updateSession } from "@/lib/supabase/proxy"
+
+import { updateSession } from "@/lib/supabase/proxy";
 
 /**
  * Runs before requests complete.
@@ -14,7 +15,7 @@ export async function proxy(request: NextRequest) {
   // if (token && req.nextUrl.pathname === "/auth/login")
   //   return NextResponse.redirect(new URL("/dashboard", req.url));
 
-  return await updateSession(request)
+  return await updateSession(request);
 }
 
 /**

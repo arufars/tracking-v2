@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import Link from "next/link";
 
 import { CircleHelp, ClipboardList, Command, Database, File, Search, Settings } from "lucide-react";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_CONFIG } from "@/config/app-config";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { sidebarItems } from "@/navigation/sidebar/sidebar-items";
+import { getSidebarItemsByRole } from "@/navigation/sidebar/sidebar-items";
 import { usePreferencesStore } from "@/stores/preferences/preferences-provider";
 
 import { NavMain } from "./nav-main";
@@ -65,6 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     name: string;
     email: string;
     avatar: string;
+    role: string;
   } | null>(null);
 
   const { sidebarVariant, sidebarCollapsible, isSynced } = usePreferencesStore(
@@ -78,25 +80,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
 
-    // Get initial user
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
+    // Get initial user with role from public.users table
+    const fetchUserWithRole = async () => {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData.user) {
+        // Fetch role from public.users table
+        const { data: userProfile } = await supabase.from("users").select("role").eq("id", authData.user.id).single();
+
         setUser({
-          name: data.user.user_metadata.full_name || data.user.email?.split('@')[0] || 'User',
-          email: data.user.email || '',
-          avatar: data.user.user_metadata.avatar_url || '',
+          name: authData.user.user_metadata.full_name || authData.user.email?.split("@")[0] || "User",
+          email: authData.user.email || "",
+          avatar: authData.user.user_metadata.avatar_url || "",
+          role: userProfile?.role || "production",
         });
       }
-    });
+    };
+
+    fetchUserWithRole();
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        setUser({
-          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-          email: session.user.email || '',
-          avatar: session.user.user_metadata.avatar_url || '',
-        });
+        fetchUserWithRole();
       } else {
         setUser(null);
       }
@@ -110,13 +115,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const variant = isSynced ? sidebarVariant : props.variant;
   const collapsible = isSynced ? sidebarCollapsible : props.collapsible;
 
+  // Get sidebar items based on user role
+  const sidebarItems = user ? getSidebarItemsByRole(user.role) : [];
+
   return (
     <Sidebar {...props} variant={variant} collapsible={collapsible}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link prefetch={false} href="/dashboard/default">
+              <Link prefetch={false} href="/dashboard">
                 <Command />
                 <span className="font-semibold text-base">{APP_CONFIG.name}</span>
               </Link>
@@ -129,9 +137,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <NavDocuments items={data.documents} /> */}
         {/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
       </SidebarContent>
-      <SidebarFooter>
-        {user && <NavUser user={user} />}
-      </SidebarFooter>
+      <SidebarFooter>{user && <NavUser user={user} />}</SidebarFooter>
     </Sidebar>
   );
 }

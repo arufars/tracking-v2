@@ -94,6 +94,45 @@ for each row
 execute function create_episode_structure();
 
 
+-- 🆕 Trigger: Auto-assign creator ke project saat project dibuat
+create or replace function auto_assign_project_creator()
+returns trigger as $$
+declare
+  v_role text;
+begin
+  -- Get user role
+  select role into v_role
+  from users
+  where id = NEW.created_by;
+
+  -- Auto-assign creator to project
+  insert into user_projects (
+    user_id,
+    project_id,
+    access_level,
+    team_role
+  ) values (
+    NEW.created_by,
+    NEW.id,
+    'admin',
+    case 
+      when v_role = 'admin' then 'admin'
+      else 'production_manager'
+    end
+  );
+
+  return NEW;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists trigger_auto_assign_project_creator on projects;
+
+create trigger trigger_auto_assign_project_creator
+  after insert on projects
+  for each row
+  execute function auto_assign_project_creator();
+
+
 -- 🆕 Trigger: Auto-update progress_percentage saat task di-complete
 create or replace function update_stage_progress()
 returns trigger as
@@ -190,38 +229,42 @@ execute function update_episode_status();
 create or replace function audit_trigger()
 returns trigger as
 $$
-
 begin
-insert into audit_logs (
-user_id,
-project_id,
-entity_type,
-entity_id,
-action,
-old_value,
-new_value
-)
-values (
-auth.uid(),
-coalesce(new.project_id, old.project_id),
-tg_table_name,
-coalesce(new.id, old.id),
-tg_op,
-to_jsonb(old),
-to_jsonb(new)
-);
+  insert into audit_logs (
+    user_id,
+    project_id,
+    entity_type,
+    entity_id,
+    action,
+    old_value,
+    new_value
+  )
+  values (
+    auth.uid(),
+    -- Handle projects table (uses id, not project_id)
+    case 
+      when tg_table_name = 'projects' then coalesce(new.id, old.id)
+      else coalesce(new.project_id, old.project_id)
+    end,
+    tg_table_name,
+    coalesce(new.id, old.id),
+    tg_op,
+    to_jsonb(old),
+    to_jsonb(new)
+  );
 
-return new;
+  return coalesce(new, old);
 end;
-
 $$
 language plpgsql security definer;
 
 
 -- ATTACH TRIGGER KE TABEL KRUSIAL
-create trigger audit_projects
-after insert or update or delete on projects
-for each row execute function audit_trigger();
+-- ⚠️ NOTE: audit_projects DISABLED karena tabel projects tidak punya kolom project_id
+-- Audit untuk projects ditangani manual atau via aplikasi jika diperlukan
+-- create trigger audit_projects
+-- after insert or update or delete on projects
+-- for each row execute function audit_trigger();
 
 create trigger audit_episodes
 after insert or update or delete on episodes

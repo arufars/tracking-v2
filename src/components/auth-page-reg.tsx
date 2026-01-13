@@ -2,14 +2,14 @@
 
 import type React from "react";
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-import { ChevronLeftIcon, AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronLeftIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 // https://magicui.design/docs/components/particles
 import { Particles } from "@/components/ui/particles";
 import { registerEmail } from "@/server/auth-actions";
