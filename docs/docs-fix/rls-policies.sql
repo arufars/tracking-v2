@@ -161,6 +161,32 @@ CREATE POLICY "production_full_access_income" ON income_records
     )
   );
 
+-- Production: Full visibility editing segments (episode_stage_segments) tanpa perlu assignment
+ALTER TABLE episode_stage_segments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "production_full_access_episode_segments" ON episode_stage_segments
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('production', 'admin')
+    )
+  );
+
+-- Production: Full visibility user_projects (agar sesama production bisa lihat assignments)
+ALTER TABLE user_projects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "production_view_user_projects" ON user_projects
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE users.id = auth.uid()
+      AND users.role IN ('production', 'admin')
+    )
+  );
+
 -- ============================================================================
 -- STEP 3: BROADCASTER POLICIES (OWN PROJECTS ONLY, READ-ONLY)
 -- ============================================================================
