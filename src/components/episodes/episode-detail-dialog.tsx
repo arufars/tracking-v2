@@ -44,7 +44,7 @@ const episodeSchema = z.object({
   season: z.coerce.number().min(1).optional(),
   title: z.string().optional(),
   description: z.string().optional(),
-  status: z.enum(["pre_production", "shooting", "pre_editing", "editing", "delivered"]).optional(),
+  status: z.enum(["pre_production", "shooting", "editing", "delivered", "payment"]).optional(),
   priority: z.enum(["urgent", "normal", "low"]).optional(),
   channel_tv: z.string().optional(),
   air_time: z.string().optional(),
@@ -105,9 +105,9 @@ const STAGE_CONFIG: Record<string, { label: string; color: string; bgColor: stri
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pre_production: { label: "Pre-Production", variant: "secondary" },
   shooting: { label: "Shooting", variant: "default" },
-  pre_editing: { label: "Pre-Editing", variant: "secondary" },
   editing: { label: "Editing", variant: "default" },
   delivered: { label: "Delivered", variant: "outline" },
+    payment: { label: "Payment", variant: "outline" },
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> =
@@ -129,20 +129,21 @@ type SegmentState = { segment_number: number; value: number };
 
 function segmentValueFromData(seg: Episode["segments"][number]) {
   if (!seg) return 0;
-  if (seg.master_percent >= 25) return 100;
-  if (seg.graphics_percent >= 25) return 75;
-  if (seg.audio_percent >= 25) return 50;
-  if (seg.cut_percent >= 25) return 25;
+  if (seg.master_percent >= 100) return 100;
+  if (seg.graphics_percent >= 100) return 75;
+  if (seg.audio_percent >= 100) return 50;
+  if (seg.cut_percent >= 100) return 25;
   return 0;
 }
 
 function segmentDataFromValue(value: number, segment_number: number) {
   return {
     segment_number,
-    cut_percent: value >= 25 ? 25 : 0,
-    audio_percent: value >= 50 ? 25 : 0,
-    graphics_percent: value >= 75 ? 25 : 0,
-    master_percent: value >= 100 ? 25 : 0,
+    // Each step completes one stage at 100% so the average reflects the milestone (25/50/75/100)
+    cut_percent: value >= 25 ? 100 : 0,
+    audio_percent: value >= 50 ? 100 : 0,
+    graphics_percent: value >= 75 ? 100 : 0,
+    master_percent: value >= 100 ? 100 : 0,
   };
 }
 
@@ -381,9 +382,9 @@ export function EpisodeDetailDialog({ episode, open, onOpenChange, userRole }: E
                         <SelectContent>
                           <SelectItem value="pre_production">Pre-Production</SelectItem>
                           <SelectItem value="shooting">Shooting</SelectItem>
-                          <SelectItem value="pre_editing">Pre-Editing</SelectItem>
                           <SelectItem value="editing">Editing</SelectItem>
                           <SelectItem value="delivered">Delivered</SelectItem>
+                          <SelectItem value="payment">Payment</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

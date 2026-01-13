@@ -139,8 +139,8 @@ export function EpisodesTable({ episodes, userRole }: EpisodesTableProps) {
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="shooting">Shooting</SelectItem>
             <SelectItem value="editing">Editing</SelectItem>
-            <SelectItem value="pre_editing">Pre-Editing</SelectItem>
             <SelectItem value="delivered">Delivered</SelectItem>
+            <SelectItem value="payment">Payment</SelectItem>
           </SelectContent>
         </Select>
 

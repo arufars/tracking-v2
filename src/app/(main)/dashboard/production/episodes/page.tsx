@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { CreateEpisodeDialog } from "@/components/episodes/create-episode-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { EpisodesTable } from "./_components/episodes-table";
+import { EpisodesViewToggle } from "./_components/episodes-view-toggle";
 
 export const metadata: Metadata = {
   title: "Production Episodes",
@@ -165,9 +165,8 @@ async function getProductionEpisodes(userId: string) {
 
 function EpisodeStats({ episodes }: { episodes: Episode[] }) {
   const totalEpisodes = episodes.length;
-  const activeEpisodes = episodes.filter(
-    (e) => e.status === "shooting" || e.status === "editing" || e.status === "pre_editing",
-  ).length;
+  const completedStatuses = new Set(["delivered", "payment"]);
+  const activeEpisodes = episodes.filter((e) => !completedStatuses.has(e.status)).length;
   const completedEpisodes = episodes.filter((e) => e.status === "delivered").length;
   const overdueEpisodes = episodes.filter((e) => {
     if (!e.deadline || e.status === "delivered") return false;
@@ -277,7 +276,7 @@ export default async function ProductionEpisodesPage() {
       {/* Stats */}
       <EpisodeStats episodes={episodes} />
 
-      {/* Episodes with Filters */}
+      {/* Episodes - Toggle between Card/Table */}
       {episodes.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -292,7 +291,7 @@ export default async function ProductionEpisodesPage() {
           </CardContent>
         </Card>
       ) : (
-        <EpisodesTable episodes={episodes} userRole={userRole} />
+        <EpisodesViewToggle episodes={episodes} userRole={userRole} />
       )}
     </div>
   );

@@ -52,12 +52,8 @@ const statusConfig: Record<
 > = {
   shooting: { label: "Shooting", variant: "default", className: "bg-blue-100 text-blue-700 border-blue-300" },
   editing: { label: "Editing", variant: "default", className: "bg-purple-100 text-purple-700 border-purple-300" },
-  pre_editing: {
-    label: "Pre-Editing",
-    variant: "default",
-    className: "bg-yellow-100 text-yellow-700 border-yellow-300",
-  },
   delivered: { label: "Delivered", variant: "success", className: "bg-green-100 text-green-700 border-green-300" },
+  payment: { label: "Payment", variant: "default", className: "bg-amber-100 text-amber-700 border-amber-300" },
 };
 
 const priorityConfig: Record<string, { label: string; className?: string }> = {
