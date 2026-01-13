@@ -1,8 +1,12 @@
 import {
+  Activity,
   Banknote,
   Calendar,
   ChartBar,
+  DollarSign,
+  Film,
   Fingerprint,
+  FolderKanban,
   Forklift,
   Gauge,
   GraduationCap,
@@ -13,9 +17,13 @@ import {
   Mail,
   MessageSquare,
   ReceiptText,
+  Settings,
   ShoppingBag,
   SquareArrowUpRight,
+  TrendingUp,
+  Tv,
   Users,
+  Wallet,
 } from "lucide-react";
 
 export interface NavSubItem {
@@ -43,6 +51,180 @@ export interface NavGroup {
   items: NavMainItem[];
 }
 
+// 🎯 ROLE-BASED SIDEBAR ITEMS
+export const getSidebarItemsByRole = (role: string): NavGroup[] => {
+  switch (role) {
+    case "admin":
+      return adminSidebarItems;
+    case "production":
+      return productionSidebarItems;
+    case "broadcaster":
+      return broadcasterSidebarItems;
+    case "investor":
+      return investorSidebarItems;
+    default:
+      return productionSidebarItems;
+  }
+};
+
+// 👑 ADMIN SIDEBAR
+const adminSidebarItems: NavGroup[] = [
+  {
+    id: 1,
+    label: "Overview",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/dashboard/admin",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Analytics",
+        url: "/dashboard/admin/analytics",
+        icon: ChartBar,
+        comingSoon: true,
+      },
+    ],
+  },
+  {
+    id: 2,
+    label: "Management",
+    items: [
+      {
+        title: "Users",
+        url: "/dashboard/admin/users",
+        icon: Users,
+      },
+      {
+        title: "Projects",
+        url: "/dashboard/admin/projects",
+        icon: FolderKanban,
+      },
+      {
+        title: "Payments",
+        url: "/dashboard/admin/payments",
+        icon: DollarSign,
+      },
+      {
+        title: "Audit Logs",
+        url: "/dashboard/admin/audit-logs",
+        icon: Activity,
+      },
+    ],
+  },
+  {
+    id: 3,
+    label: "Settings",
+    items: [
+      {
+        title: "System Settings",
+        url: "/dashboard/admin/settings",
+        icon: Settings,
+        comingSoon: true,
+      },
+    ],
+  },
+];
+
+// 🎬 PRODUCTION SIDEBAR
+const productionSidebarItems: NavGroup[] = [
+  {
+    id: 1,
+    label: "Production",
+    items: [
+      {
+        title: "Live Board",
+        url: "/dashboard/production",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Projects",
+        url: "/dashboard/production/projects",
+        icon: FolderKanban,
+      },
+      {
+        title: "Episodes",
+        url: "/dashboard/production/episodes",
+        icon: Film,
+      },
+      {
+        title: "Calendar",
+        url: "/dashboard/production/calendar",
+        icon: Calendar,
+      },
+    ],
+  },
+  {
+    id: 2,
+    label: "Team",
+    items: [
+      {
+        title: "Payments",
+        url: "/dashboard/production/payments",
+        icon: DollarSign,
+      },
+    ],
+  },
+];
+
+// 📺 BROADCASTER SIDEBAR
+const broadcasterSidebarItems: NavGroup[] = [
+  {
+    id: 1,
+    label: "Overview",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/dashboard/broadcaster",
+        icon: Tv,
+      },
+      {
+        title: "Projects",
+        url: "/dashboard/broadcaster/projects",
+        icon: FolderKanban,
+      },
+      {
+        title: "Episodes",
+        url: "/dashboard/broadcaster/episodes",
+        icon: Film,
+      },
+      {
+        title: "Delivery Schedule",
+        url: "/dashboard/broadcaster/schedule",
+        icon: Calendar,
+      },
+    ],
+  },
+];
+
+// 💰 INVESTOR SIDEBAR
+const investorSidebarItems: NavGroup[] = [
+  {
+    id: 1,
+    label: "Financial",
+    items: [
+      {
+        title: "Dashboard",
+        url: "/dashboard/investor",
+        icon: Wallet,
+      },
+      {
+        title: "Reports",
+        url: "/dashboard/investor/reports",
+        icon: TrendingUp,
+        comingSoon: true,
+      },
+      {
+        title: "Projects",
+        url: "/dashboard/investor/projects",
+        icon: FolderKanban,
+        comingSoon: true,
+      },
+    ],
+  },
+];
+
+// Default export (for backward compatibility)
 export const sidebarItems: NavGroup[] = [
   {
     id: 1,

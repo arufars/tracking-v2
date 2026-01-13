@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/app/(main)/dashboard/_components/sidebar/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { users } from "@/data/users";
 import { SIDEBAR_COLLAPSIBLE_VALUES, SIDEBAR_VARIANT_VALUES } from "@/lib/preferences/layout";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { getPreference } from "@/server/server-actions";
 
@@ -22,6 +23,34 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
     getPreference("sidebar_variant", SIDEBAR_VARIANT_VALUES, "inset"),
     getPreference("sidebar_collapsible", SIDEBAR_COLLAPSIBLE_VALUES, "icon"),
   ]);
+
+  // Fetch user dari Supabase
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Redirect ke login jika belum login
+  if (!user) {
+    redirect("/login");
+  }
+
+  // ✅ Fetch user profile dari public.users table (untuk role yang akurat)
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("full_name, role, avatar_url")
+    .eq("id", user.id)
+    .single();
+
+  const userData = {
+    id: user.id,
+    name: userProfile?.full_name || user.user_metadata.full_name || user.email?.split("@")[0] || "User",
+    email: user.email || "",
+    avatar: userProfile?.avatar_url || user.user_metadata.avatar_url || "",
+    role: userProfile?.role || "production", // ✅ Role dari table, bukan metadata
+  };
+
+  console.log("Authenticated user:", { email: user.email, role: userData.role });
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
@@ -50,7 +79,7 @@ export default async function Layout({ children }: Readonly<{ children: ReactNod
             <div className="flex items-center gap-2">
               <LayoutControls />
               <ThemeSwitcher />
-              <AccountSwitcher users={users} />
+              <AccountSwitcher user={userData} />
             </div>
           </div>
         </header>

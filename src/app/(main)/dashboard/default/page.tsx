@@ -1,14 +1,33 @@
-import { ChartAreaInteractive } from "./_components/chart-area-interactive";
-import data from "./_components/data.json";
-import { DataTable } from "./_components/data-table";
-import { SectionCards } from "./_components/section-cards";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return (
-    <div className="@container/main flex flex-col gap-4 md:gap-6">
-      <SectionCards />
-      <ChartAreaInteractive />
-      <DataTable data={data} />
-    </div>
-  );
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export default async function Page() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch user role dari table users
+  const { data: userProfile } = await supabase.from("users").select("role").eq("id", user.id).single();
+
+  const role = userProfile?.role || "production";
+
+  // Redirect based on role
+  switch (role) {
+    case "admin":
+      redirect("/dashboard/admin");
+    case "production":
+      redirect("/dashboard/production");
+    case "broadcaster":
+      redirect("/dashboard/broadcaster");
+    case "investor":
+      redirect("/dashboard/investor");
+    default:
+      redirect("/dashboard/production");
+  }
 }

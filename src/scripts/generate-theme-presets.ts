@@ -108,18 +108,25 @@ const updated = fileContent.replace(
 );
 
 async function main() {
-  const formatted = execFileSync("npx", ["@biomejs/biome", "format", "--stdin-file-path", outputPath], {
-    input: updated,
-    encoding: "utf8",
-  });
+  try {
+    const formatted = execFileSync("npx", ["@biomejs/biome", "format", "--stdin-file-path", outputPath], {
+      input: updated,
+      encoding: "utf8",
+    });
 
-  if (formatted === fileContent) {
-    console.log("ℹ️  No changes in theme.ts");
-    return;
+    if (formatted === fileContent) {
+      console.log("ℹ️  No changes in theme.ts");
+      return;
+    }
+
+    fs.writeFileSync(outputPath, formatted);
+    console.log("✅ theme.ts updated with new theme presets");
+  } catch (error) {
+    // Fallback: write unformatted if npx not available
+    console.warn("⚠️  Biome format failed, writing unformatted:", error);
+    fs.writeFileSync(outputPath, updated);
+    console.log("✅ theme.ts updated (unformatted)");
   }
-
-  fs.writeFileSync(outputPath, formatted);
-  console.log("✅ theme.ts updated with new theme presets");
 }
 
 main().catch((err) => {
