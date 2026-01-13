@@ -48,9 +48,9 @@ const STATUS_OPTIONS = [
   { value: "all", label: "All Status" },
   { value: "pre_production", label: "Pre-Production" },
   { value: "shooting", label: "Shooting" },
-  { value: "pre_editing", label: "Pre-Editing" },
   { value: "editing", label: "Editing" },
   { value: "delivered", label: "Delivered" },
+  { value: "payment", label: "Payment" },
 ];
 
 const PRIORITY_OPTIONS = [

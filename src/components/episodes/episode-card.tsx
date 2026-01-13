@@ -90,9 +90,9 @@ const STAGE_CONFIG: Record<string, { label: string; color: string; bgColor: stri
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pre_production: { label: "Pre-Prod", variant: "secondary" },
   shooting: { label: "Shooting", variant: "default" },
-  pre_editing: { label: "Pre-Edit", variant: "secondary" },
   editing: { label: "Editing", variant: "default" },
   delivered: { label: "Delivered", variant: "outline" },
+  payment: { label: "Payment", variant: "outline" },
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
@@ -123,7 +123,11 @@ export function EpisodeCard({ episode, userRole }: EpisodeCardProps) {
     ? Math.ceil((new Date(episode.deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const isOverdue = daysUntilDeadline !== null && daysUntilDeadline < 0 && episode.status !== "delivered";
+  const isOverdue =
+    daysUntilDeadline !== null &&
+    daysUntilDeadline < 0 &&
+    episode.status !== "delivered" &&
+    episode.status !== "payment";
   const isUrgent = daysUntilDeadline !== null && daysUntilDeadline <= 3 && daysUntilDeadline >= 0;
 
   return (

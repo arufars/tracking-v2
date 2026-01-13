@@ -32,6 +32,13 @@ interface Episode {
   completed_tasks: number;
   notes: string | null;
   team_name: string | null;
+  segments: {
+    segment_number: number;
+    cut_percent: number;
+    audio_percent: number;
+    graphics_percent: number;
+    master_percent: number;
+  }[];
 }
 
 interface StageStats {
@@ -40,21 +47,12 @@ interface StageStats {
   avg_progress: number;
 }
 
-const STAGE_KEYS = ["pre_production", "shooting", "pre_editing", "editing", "delivered"];
+const STAGE_KEYS = ["pre_production", "shooting", "editing", "delivered", "payment"];
 
-async function getProductionData(userId: string) {
+async function getProductionData() {
   const supabase = await createSupabaseServerClient();
 
-  // Get projects where user is a team member
-  const { data: userProjects } = await supabase.from("user_projects").select("project_id").eq("user_id", userId);
-
-  const projectIds = userProjects?.map((up) => up.project_id) || [];
-
-  if (projectIds.length === 0) {
-    return { episodes: [], stageStats: [], metrics: null };
-  }
-
-  // Get episodes with stage data
+  // Get all episodes with segment-based progress (production role can view all)
   const { data: episodesData, error } = await supabase
     .from("episodes")
     .select(`
@@ -74,19 +72,15 @@ async function getProductionData(userId: string) {
         id,
         title
       ),
-      episode_stages (
-        id,
+      episode_stage_segments (
         stage,
-        status,
-        progress_percentage,
-        stage_notes,
-        stage_tasks (
-          id,
-          is_completed
-        )
+        segment_number,
+        cut_percent,
+        audio_percent,
+        graphics_percent,
+        master_percent
       )
     `)
-    .in("project_id", projectIds)
     .order("target_delivery_date", { ascending: true, nullsFirst: false });
 
   if (error) {
@@ -96,62 +90,60 @@ async function getProductionData(userId: string) {
 
   // Process episodes
   const episodes: Episode[] = (episodesData || []).map((episode: any) => {
-    const stages = episode.episode_stages || [];
+    const segmentsRaw = episode.episode_stage_segments || [];
 
-    // Find current active stage
-    const stageOrder = ["shooting", "editing", "review", "delivered"];
-    let currentStage = "shooting";
-    for (const stageName of stageOrder) {
-      const stage = stages.find((s: any) => s.stage === stageName);
-      if (stage) {
-        if (stage.status !== "completed") {
-          currentStage = stageName;
-          break;
-        }
-        currentStage = stageName;
-      }
-    }
+    // Current stage based on status
+    const currentStage = episode.status || "pre_production";
 
-    // Calculate progress
+    // Progress from editing segments (3 segments x 4 tasks)
+    const editingSegments = [1, 2, 3].map((num) => {
+      const found = segmentsRaw.find((s: any) => s.segment_number === num && s.stage === "editing");
+
+      return {
+        cut: found?.cut_percent || 0,
+        audio: found?.audio_percent || 0,
+        graphics: found?.graphics_percent || 0,
+        master: found?.master_percent || 0,
+      };
+    });
+
+    const segmentAverages = editingSegments.map((seg) => (seg.cut + seg.audio + seg.graphics + seg.master) / 4);
     const stageProgress =
-      stages.length > 0
-        ? Math.round(stages.reduce((sum: number, s: any) => sum + (s.progress_percentage || 0), 0) / stages.length)
+      segmentAverages.length > 0
+        ? Math.round(segmentAverages.reduce((sum, val) => sum + val, 0) / segmentAverages.length)
         : 0;
 
-    // Calculate tasks
-    const allTasks = stages.flatMap((stage: any) => stage.stage_tasks || []);
-    const totalTasks = allTasks.length;
-    const completedTasks = allTasks.filter((task: any) => task.is_completed === true).length;
-
-    // Calculate days until deadline
     const deadline = episode.target_delivery_date;
     const daysUntilDeadline = deadline
       ? Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
       : null;
-
-    // Get stage notes from current stage
-    const currentStageData = stages.find((s: any) => s.stage === currentStage);
-    const stageNotes = currentStageData?.stage_notes || episode.notes;
 
     return {
       id: episode.id,
       episode_number: episode.episode_number,
       episode_title: episode.title || `Episode ${episode.episode_number}`,
       project_name: episode.projects?.title || "Unknown Project",
-      current_stage: episode.status || "pre_production", // Use status directly for Kanban columns
+      current_stage: currentStage,
       progress_percentage: stageProgress,
       deadline,
-      status: episode.status || "pre_production",
+      status: currentStage,
       priority: episode.priority || "normal",
       air_time: episode.air_time,
       air_date: episode.air_date,
       channel_tv: episode.channel_tv,
       editor_name: episode.editor_name,
       days_until_deadline: daysUntilDeadline,
-      total_tasks: totalTasks,
-      completed_tasks: completedTasks,
-      notes: stageNotes,
+      total_tasks: 0,
+      completed_tasks: 0,
+      notes: episode.notes,
       team_name: "Tim Production A", // TODO: Get from user_projects or project metadata
+      segments: editingSegments.map((seg, idx) => ({
+        segment_number: idx + 1,
+        cut_percent: seg.cut,
+        audio_percent: seg.audio,
+        graphics_percent: seg.graphics,
+        master_percent: seg.master,
+      })),
     };
   });
 
@@ -172,10 +164,12 @@ async function getProductionData(userId: string) {
 
   // Calculate overall metrics
   const totalEpisodes = episodes.length;
-  const completedEpisodes = episodes.filter((ep) => ep.current_stage === "delivered").length;
-  const activeEpisodes = episodes.filter((ep) => ep.current_stage !== "delivered").length;
+  const completedStages = new Set(["delivered", "payment"]);
+
+  const completedEpisodes = episodes.filter((ep) => completedStages.has(ep.current_stage)).length;
+  const activeEpisodes = episodes.filter((ep) => !completedStages.has(ep.current_stage)).length;
   const delayedEpisodes = episodes.filter(
-    (ep) => ep.days_until_deadline !== null && ep.days_until_deadline < 0 && ep.current_stage !== "delivered",
+    (ep) => ep.days_until_deadline !== null && ep.days_until_deadline < 0 && !completedStages.has(ep.current_stage),
   ).length;
   const urgentEpisodes = episodes.filter(
     (ep) => ep.days_until_deadline !== null && ep.days_until_deadline <= 3 && ep.days_until_deadline >= 0,
@@ -302,7 +296,7 @@ export default async function ProductionPage() {
     redirect("/unauthorized");
   }
 
-  const { episodes, stageStats, metrics } = await getProductionData(user.id);
+  const { episodes, stageStats, metrics } = await getProductionData();
 
   return (
     <div className="space-y-4">

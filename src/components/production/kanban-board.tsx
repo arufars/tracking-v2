@@ -50,6 +50,13 @@ interface Episode {
   completed_tasks: number;
   notes: string | null;
   team_name: string | null;
+  segments?: {
+    segment_number: number;
+    cut_percent: number;
+    audio_percent: number;
+    graphics_percent: number;
+    master_percent: number;
+  }[];
 }
 
 interface StageStats {
@@ -82,15 +89,6 @@ const STAGE_CONFIG = {
     textColor: "text-blue-600 dark:text-blue-400",
     badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
   },
-  pre_editing: {
-    label: "Pre-Editing",
-    icon: Eye,
-    color: "bg-orange-500",
-    borderColor: "border-t-orange-500",
-    bgLight: "bg-orange-50 dark:bg-orange-950/30",
-    textColor: "text-orange-600 dark:text-orange-400",
-    badgeClass: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
-  },
   editing: {
     label: "Editing",
     icon: Film,
@@ -109,6 +107,15 @@ const STAGE_CONFIG = {
     textColor: "text-green-600 dark:text-green-400",
     badgeClass: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",
   },
+  payment: {
+    label: "Payment",
+    icon: Eye,
+    color: "bg-teal-500",
+    borderColor: "border-t-teal-500",
+    bgLight: "bg-teal-50 dark:bg-teal-950/30",
+    textColor: "text-teal-600 dark:text-teal-400",
+    badgeClass: "bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300",
+  },
 } as const;
 
 const PRIORITY_CONFIG = {
@@ -119,11 +126,29 @@ const PRIORITY_CONFIG = {
 
 function KanbanCard({ episode }: { episode: Episode }) {
   const isDelayed =
-    episode.days_until_deadline !== null && episode.days_until_deadline < 0 && episode.current_stage !== "delivered";
+    episode.days_until_deadline !== null &&
+    episode.days_until_deadline < 0 &&
+    episode.current_stage !== "delivered" &&
+    episode.current_stage !== "payment";
   const isUrgent =
     episode.days_until_deadline !== null && episode.days_until_deadline <= 3 && episode.days_until_deadline >= 0;
 
   const priorityConfig = PRIORITY_CONFIG[episode.priority as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.normal;
+
+  const segments = episode.segments || [];
+
+  const segmentProgressValue = (seg: (typeof segments)[number]) =>
+    Math.round((seg.cut_percent + seg.audio_percent + seg.graphics_percent + seg.master_percent) / 4);
+
+  const segmentLabel = (seg: (typeof segments)[number]) => {
+    if (seg.master_percent === 100) return "Mastering 100%";
+    if (seg.graphics_percent >= 75) return "Grafik 75%";
+    if (seg.audio_percent >= 50) return "Audio 50%";
+    if (seg.cut_percent >= 25) return "Rafkat 25%";
+    return "Belum mulai";
+  };
+
+  const latestSegment = segments.at(-1);
 
   return (
     <Card
@@ -212,6 +237,22 @@ function KanbanCard({ episode }: { episode: Episode }) {
           </div>
           <Progress value={episode.progress_percentage} className="h-2" />
         </div>
+
+        {latestSegment && (
+          <div className="rounded-md border border-border/60 bg-background/70 p-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Segment terakhir</span>
+              <span className="font-semibold text-foreground">
+                Segmen {latestSegment.segment_number} - {segmentLabel(latestSegment)}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-xs font-medium text-foreground">
+              <span>Status {segmentLabel(latestSegment)}</span>
+              <span className="text-primary">{segmentProgressValue(latestSegment)}%</span>
+            </div>
+            <Progress value={segmentProgressValue(latestSegment)} className="mt-1.5 h-1.5" />
+          </div>
+        )}
 
         {/* Tim Production Info */}
         {episode.team_name && (

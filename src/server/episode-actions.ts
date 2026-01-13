@@ -11,7 +11,7 @@ export interface CreateEpisodeInput {
   season?: number;
   title?: string;
   description?: string;
-  status?: "pre_production" | "shooting" | "pre_editing" | "editing" | "delivered";
+  status?: "pre_production" | "shooting" | "editing" | "delivered" | "payment";
   priority?: "urgent" | "normal" | "low";
   channel_tv?: string;
   air_time?: string;

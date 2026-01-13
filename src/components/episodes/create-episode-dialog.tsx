@@ -32,7 +32,7 @@ const episodeSchema = z.object({
   season: z.coerce.number().min(1).optional(),
   title: z.string().optional(),
   description: z.string().optional(),
-  status: z.enum(["pre_production", "shooting", "pre_editing", "editing", "delivered"]).optional(),
+  status: z.enum(["pre_production", "shooting", "editing", "delivered", "payment"]).optional(),
   priority: z.enum(["urgent", "normal", "low"]).optional(),
   channel_tv: z.string().optional(),
   air_time: z.string().optional(),
@@ -267,9 +267,9 @@ export function CreateEpisodeDialog() {
                     <SelectContent>
                       <SelectItem value="pre_production">Pre-Production</SelectItem>
                       <SelectItem value="shooting">Shooting</SelectItem>
-                      <SelectItem value="pre_editing">Pre-Editing</SelectItem>
                       <SelectItem value="editing">Editing</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="payment">Payment</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

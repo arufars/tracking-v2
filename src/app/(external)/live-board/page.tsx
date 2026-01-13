@@ -64,13 +64,15 @@ async function getLiveProductionData() {
         id,
         title
       ),
-      episode_stages (
+      episode_stage_segments (
         stage,
-        progress_percentage,
-        stage_notes
+        segment_number,
+        cut_percent,
+        audio_percent,
+        graphics_percent,
+        master_percent
       )
     `)
-    .neq("status", "delivered")
     .order("project_id", { ascending: true })
     .order("episode_number", { ascending: true });
 
@@ -81,17 +83,25 @@ async function getLiveProductionData() {
 
   // Process episodes
   const episodes: Episode[] = (episodesData || []).map((episode: any) => {
-    const stages = episode.episode_stages || [];
+    const segmentsRaw = episode.episode_stage_segments || [];
 
-    // Calculate progress
+    // Editing progress is derived from episode_stage_segments (3 segments x 4 tasks)
+    const editingSegments = [1, 2, 3].map((num) => {
+      const found = segmentsRaw.find((s: any) => s.segment_number === num && s.stage === "editing");
+
+      return {
+        cut: found?.cut_percent || 0,
+        audio: found?.audio_percent || 0,
+        graphics: found?.graphics_percent || 0,
+        master: found?.master_percent || 0,
+      };
+    });
+
+    const segmentAverages = editingSegments.map((seg) => (seg.cut + seg.audio + seg.graphics + seg.master) / 4);
     const stageProgress =
-      stages.length > 0
-        ? Math.round(stages.reduce((sum: number, s: any) => sum + (s.progress_percentage || 0), 0) / stages.length)
+      segmentAverages.length > 0
+        ? Math.round(segmentAverages.reduce((sum, val) => sum + val, 0) / segmentAverages.length)
         : 0;
-
-    // Get stage notes
-    const currentStageData = stages.find((s: any) => s.stage === episode.status);
-    const stageNotes = currentStageData?.stage_notes || episode.notes;
 
     return {
       id: episode.id,
@@ -104,13 +114,13 @@ async function getLiveProductionData() {
       channel_tv: episode.channel_tv,
       air_time: episode.air_time,
       editor_name: episode.editor_name,
-      notes: stageNotes,
+      notes: episode.notes,
       team_name: "Tim Production A",
     };
   });
 
   // Group by stage and then by project
-  const STAGE_KEYS = ["shooting", "editing", "pre_editing", "delivered"];
+  const STAGE_KEYS = ["shooting", "editing", "delivered", "payment"];
   const stageData: StageData[] = STAGE_KEYS.map((stage) => {
     const stageEpisodes = episodes.filter((ep) => ep.current_stage === stage);
 
@@ -152,19 +162,19 @@ const STAGE_CONFIG = {
     textColor: "text-blue-600",
     bgLight: "bg-blue-50 dark:bg-blue-950/30",
   },
-  pre_editing: {
-    label: "SELESAI",
-    icon: Check,
-    color: "bg-green-500",
-    textColor: "text-green-600",
-    bgLight: "bg-green-50 dark:bg-green-950/30",
-  },
   delivered: {
     label: "KIRIM G DRIVE",
     icon: Monitor,
     color: "bg-orange-500",
     textColor: "text-orange-600",
     bgLight: "bg-orange-50 dark:bg-orange-950/30",
+  },
+  payment: {
+    label: "PAYMENT",
+    icon: Check,
+    color: "bg-teal-500",
+    textColor: "text-teal-600",
+    bgLight: "bg-teal-50 dark:bg-teal-950/30",
   },
 } as const;
 
@@ -223,8 +233,8 @@ function EpisodeCard({ episode }: { episode: Episode }) {
               "h-1.5",
               episode.current_stage === "shooting" && "[&>div]:bg-purple-500",
               episode.current_stage === "editing" && "[&>div]:bg-blue-500",
-              episode.current_stage === "pre_editing" && "[&>div]:bg-green-500",
               episode.current_stage === "delivered" && "[&>div]:bg-orange-500",
+              episode.current_stage === "payment" && "[&>div]:bg-teal-500",
             )}
           />
         </div>
