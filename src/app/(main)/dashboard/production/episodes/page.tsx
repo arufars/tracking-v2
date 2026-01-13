@@ -54,20 +54,11 @@ interface StageTask {
   assigned_to_name: string | null;
 }
 
-async function getProductionEpisodes(userId: string) {
+async function getProductionEpisodes(userId: string, role: string) {
   const supabase = await createSupabaseServerClient();
 
-  // Get projects where user is a team member
-  const { data: userProjects } = await supabase.from("user_projects").select("project_id").eq("user_id", userId);
-
-  const projectIds = userProjects?.map((up) => up.project_id) || [];
-
-  if (projectIds.length === 0) {
-    return [];
-  }
-
-  // Get episodes with aggregated task data
-  const { data: episodes, error } = await supabase
+  // Production sees all episodes; others filtered by their assigned projects
+  let episodesQuery = supabase
     .from("episodes")
     .select(
       `
@@ -100,8 +91,24 @@ async function getProductionEpisodes(userId: string) {
       )
     `,
     )
-    .in("project_id", projectIds)
     .order("target_delivery_date", { ascending: true, nullsFirst: false });
+
+  if (role !== "production") {
+    const { data: userProjects } = await supabase
+      .from("user_projects")
+      .select("project_id")
+      .eq("user_id", userId);
+
+    const projectIds = userProjects?.map((up) => up.project_id) || [];
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    episodesQuery = episodesQuery.in("project_id", projectIds);
+  }
+
+  // Get episodes with aggregated task data
+  const { data: episodes, error } = await episodesQuery;
 
   if (error) {
     console.error("Error fetching episodes:", error);
@@ -259,7 +266,7 @@ export default async function ProductionEpisodesPage() {
     redirect("/unauthorized");
   }
 
-  const episodes = await getProductionEpisodes(user.id);
+  const episodes = await getProductionEpisodes(user.id, userData.role);
   const userRole = userData.role;
 
   return (

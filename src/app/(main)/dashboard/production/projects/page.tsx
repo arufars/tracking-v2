@@ -16,28 +16,11 @@ export const metadata: Metadata = {
   description: "Manage your production projects",
 };
 
-async function getProductionProjects(userId: string) {
+async function getProductionProjects(userId: string, role: string) {
   const supabase = await createSupabaseServerClient();
 
-  // Get projects where user is a team member
-  const { data: userProjects, error: userProjectsError } = await supabase
-    .from("user_projects")
-    .select("project_id")
-    .eq("user_id", userId);
-
-  if (userProjectsError) {
-    console.error("Error fetching user projects:", userProjectsError);
-    return [];
-  }
-
-  const projectIds = userProjects?.map((up) => up.project_id) || [];
-
-  if (projectIds.length === 0) {
-    return [];
-  }
-
-  // Get project details with episode statistics
-  const { data: projects, error: projectsError } = await supabase
+  // Production sees all projects; others stick to assigned projects via user_projects
+  let projectQuery = supabase
     .from("projects")
     .select(
       `
@@ -56,8 +39,28 @@ async function getProductionProjects(userId: string) {
       )
     `,
     )
-    .in("id", projectIds)
     .order("created_at", { ascending: false });
+
+  if (role !== "production") {
+    const { data: userProjects, error: userProjectsError } = await supabase
+      .from("user_projects")
+      .select("project_id")
+      .eq("user_id", userId);
+
+    if (userProjectsError) {
+      console.error("Error fetching user projects:", userProjectsError);
+      return [];
+    }
+
+    const projectIds = userProjects?.map((up) => up.project_id) || [];
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    projectQuery = projectQuery.in("id", projectIds);
+  }
+
+  const { data: projects, error: projectsError } = await projectQuery;
 
   if (projectsError) {
     console.error("Error fetching projects:", projectsError);
@@ -231,7 +234,7 @@ export default async function ProductionProjectsPage() {
     redirect("/unauthorized");
   }
 
-  const projects = await getProductionProjects(user.id);
+  const projects = await getProductionProjects(user.id, userData.role);
 
   // Get team members for each project
   const projectsWithTeams = await Promise.all(

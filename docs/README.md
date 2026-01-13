@@ -156,6 +156,7 @@ Located in [docs-fix/](docs-fix/) folder:
 - Design → [DOKUMENTASI_ROLE_BASED_ACCESS_CONTROL.md Section 3.H.5, 8.B](../DOKUMENTASI_ROLE_BASED_ACCESS_CONTROL.md)
 - SQL policies → [docs-fix/rls-policies.sql](docs-fix/rls-policies.sql)
 - Implementation → [RBAC_IMPLEMENTATION_CHECKLIST.md Phase 2](RBAC_IMPLEMENTATION_CHECKLIST.md)
+- Production shared visibility → RLS policy di `docs-fix/rls-policies.sql` yang enable SELECT `user_projects` untuk role `production`/`admin`, supaya semua user produksi bisa melihat semua projects/episodes tanpa perlu assignment per user.
 
 ### **Project Features**
 
